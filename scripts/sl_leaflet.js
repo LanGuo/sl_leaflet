@@ -6,7 +6,7 @@ const centerLon = -0.12;
 const initialZoom = 12;
 //var smell_colors = d3.scale.category20();
 
-var myMap = L.map('londonMap')
+let myMap = L.map('londonMap')
               .setView([centerLat, centerLon], initialZoom);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -23,10 +23,13 @@ const boroughFilePath = 'https://rawcdn.githack.com/Smelly-London/Smelly-London/
 // '../data/london_districts_latlong_with_centroids.json';
 
 
-function getJSON(url, callback) {
+function getJSONCallBack(url, callback) {
   let xhr = new XMLHttpRequest();
-  xhr.onload = function () { 
-    callback(this.responseText) 
+  xhr.onreadystatechange = function () {
+    if (this.readyState == 4 && this.status == 200) {
+      let resultJson = JSON.parse(this.responseText);
+      callback(resultJson);
+    }
   };
   xhr.open('GET', url, true);
   xhr.send();
@@ -41,11 +44,12 @@ function renderGeoJsonLayerGroup(geoJson) {
     thisLayer.name = feature.properties.name;
     thisLayer.addTo(layerGroup);
   }
+  layerGroup.addTo(myMap);
   return layerGroup;
 }
 
 function loadGeoJsonLayers(url) {
-  getJSON(url, data => renderGeoJsonLayerGroup(JSON.parse(data)));
+  getJSONCallBack(url, data => renderGeoJsonLayerGroup(data));
 }
 
 let boroughLayers = loadGeoJsonLayers(boroughFilePath);

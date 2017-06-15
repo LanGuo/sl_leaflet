@@ -1,12 +1,17 @@
 
-const yearToPlot = '1964';
 //var renderDiv = document.getElementById('mapid');
 const centerLat = 51.5;
 const centerLon = -0.12;
-const initialZoom = 12;
+const initialZoom = 10;
 //var smell_colors = d3.scale.category20();
 
-let myMap = L.map('londonMap')
+// function updateSelectedYear(year) {
+//  document.querySelector('#yearOutput').value = `Year shown on map: ${year}`;
+//}
+
+//const yearToPlot = document.querySelector('#yearSlider').value;
+
+var myMap = L.map('londonMap')
               .setView([centerLat, centerLon], initialZoom);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -15,13 +20,11 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
  maxZoom: 18,
 }).addTo(myMap);
 
-
 // Retrieve boroughs outline data and add it as a geojson layer on the map.
 const boroughStyle = {'color': 'black',
-                      'weight': 1};
+                      'weight': 1, 
+		     };
 const boroughFilePath = 'https://rawcdn.githack.com/Smelly-London/Smelly-London/master/visualisation/leaflet/data/london_districts_latlong_with_centroids.json' 
-// '../data/london_districts_latlong_with_centroids.json';
-
 
 function getJSONCallBack(url, callback) {
   let xhr = new XMLHttpRequest();
@@ -35,7 +38,7 @@ function getJSONCallBack(url, callback) {
   xhr.send();
 }
 
-function renderGeoJsonLayerGroup(geoJson) {
+function renderGeoJsonLayerGroup(geoJson, map) {
   let layerGroup = L.layerGroup();
   for(let feature of geoJson.features) {
     let thisLayer = L.geoJSON();
@@ -44,24 +47,26 @@ function renderGeoJsonLayerGroup(geoJson) {
     thisLayer.name = feature.properties.name;
     thisLayer.addTo(layerGroup);
   }
-  layerGroup.addTo(myMap);
-  return layerGroup;
+  layerGroup.addTo(map);
+  // return layerGroup; // cannot return value from async callback func!
 }
 
-function loadGeoJsonLayers(url) {
-  getJSONCallBack(url, data => renderGeoJsonLayerGroup(data));
+function loadGeoJsonLayers(url, map) {
+  getJSONCallBack(url, data => renderGeoJsonLayerGroup(data, myMap));
 }
 
-let boroughLayers = loadGeoJsonLayers(boroughFilePath);
-boroughLayers.addTo(myMap);
-console.log(boroughLayers);
+loadGeoJsonLayers(boroughFilePath, myMap);
+// boroughLayers.addTo(myMap); //Cannot get ref to this returned by async callback func!
+// console.log(boroughLayers);
 
+
+function updateMap(yearToPlot) {
+
+document.querySelector('#yearOutput').value = `Year shown on map: ${yearToPlot}`;
 // Retrieve smell by borough and year
-const smellFilePath = '../data/moh_smell_category_borough_json.json';
-const smellJson = getJSON(smellFilePath, data => JSON.parse(data));
-console.log('smellJson', smellJson);
+const smellFilePath = 'https://rawcdn.githack.com/Smelly-London/Smelly-London/master/visualisation/leaflet/data/moh_smell_category_borough_json.json';
 
-function getSmellDataThisYear(year, smellJson) {
+function renderSmellDataThisYear(map, smellJson, year) {
   let boroughDataThisYear = {};
   for (let boroughYearKey in smellJson) {
     if (boroughYearKey.endsWith(year)) {
@@ -79,46 +84,30 @@ function getSmellDataThisYear(year, smellJson) {
       }
     }
   }
+  let layers = [];
+  map.eachLayer(function(layer) {
+    if( layer instanceof L.GeoJSON )
+      layers.push(layer);
+  });
+  layers.forEach(function(layer) {
+    popUpMessage = `${layer.name} ${year}: `; 
+    smellsThisLayer = boroughDataThisYear[layer.name];
+    if (smellsThisLayer) {
+      for (let smell of smellsThisLayer) {
+	popUpMessage += `${smell['count']} ${smell['cat']} smell. \n`;
+      }
+    }
+    else {
+      popUpMessage += `No smells found`;
+    }
+    layer.bindPopup(popUpMessage);
+  })
 }
 
+function loadLayerSmells(map, url, year) {
+  getJSONCallBack(url, data => renderSmellDataThisYear(map, data, year));
+}
 
+loadLayerSmells(myMap, smellFilePath, yearToPlot);
+}
 
-
-// console.log('1', boroughDataThisYear);
-
-
-
-
-/*
-boroughLayers.eachLayer(function(layer) {
-  popUpMessage = 'layer.name' + yearToPlot + ':\n'
-  smellsThisLayer = boroughDataThisYear[layer.name];
-  if (smellsThisLayer) {
-    for (let smell of smellsThisLayer) {
-      popUpMessage += (smell['cat'] + ':' + smell['count'] + '\n')
-    }
-  }
-  layer.bindPopup(popUpMessage);
-})
-
-
-
-
-let smellJson = require(smellFilePath);
-
-                     
-const boroughJson = require(['json!data/london_districts_latlong_with_centroids.json']);
-console.log(boroughJson);
-
-require([boroughFilePath], function(boroughJson) {
-  for(let borough_outline of boroughJson.features) {
-    let thisLayer = L.geoJSON();
-    thisLayer.addData(borough_outline,
-                      {style: boroughStyle});
-    thisLayer.name = borough_outline.properties.name;
-    thisLayer.addTo(boroughLayers);
-  }
-});
-
-var boroughGeoJson = getJSON(boroughFilePath, data => {console.log(typeof(data)); return JSON.parse(data)});
-*/

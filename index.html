@@ -8,14 +8,15 @@
     integrity="sha512-A7vV8IFfih/D732iSSKi20u/ooOfj/AGehOKq0f4vLT1Zr2Y+RX7C+w8A1gaSasGtRUZpF/NZgzSAu4/Gc41Lg=="
     crossorigin=""></script>
     <style>
-    	#londonMap { height: 550px; }
+    	#londonMap { height: 650px; }
     </style>
   </head>
 
   <body>
-    <!-- data-main attribute tells require.js to load
-             scripts/main.js after require.js loads. -->
-    <script data-main="scripts/sl_leaflet.js" src="scripts/require.js"></script>
+    <h2> Please select a year to show smells of different London districts: </h2>
+    <input id="yearSlider" type="range" min="1848" max="1972" step="1" value="1965" oninput="updateMap(value)"></input>
+    <output for="yearSlider" id="yearOutput">  </output>
+
     <div id="londonMap"></div>
     <script src="scripts/sl_leaflet.js"></script>
   </body>
